@@ -3,15 +3,11 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
-declare(strict_types=1);
-
 namespace Magento\Sitemap\Model;
 
-use Magento\Framework\App\Area;
-use Magento\Framework\App\Config\ScopeConfigInterface;
 use Magento\Sitemap\Model\EmailNotification as SitemapEmail;
+use Magento\Framework\App\Config\ScopeConfigInterface;
 use Magento\Sitemap\Model\ResourceModel\Sitemap\CollectionFactory;
-use Magento\Store\Model\App\Emulation;
 use Magento\Store\Model\ScopeInterface;
 
 /**
@@ -66,27 +62,19 @@ class Observer
     private $emailNotification;
 
     /**
-     * @var Emulation
-     */
-    private $appEmulation;
-
-    /**
      * Observer constructor.
      * @param ScopeConfigInterface $scopeConfig
      * @param CollectionFactory $collectionFactory
      * @param EmailNotification $emailNotification
-     * @param Emulation $appEmulation
      */
     public function __construct(
         ScopeConfigInterface $scopeConfig,
         CollectionFactory $collectionFactory,
-        SitemapEmail $emailNotification,
-        Emulation $appEmulation
+        SitemapEmail $emailNotification
     ) {
         $this->scopeConfig = $scopeConfig;
         $this->collectionFactory = $collectionFactory;
         $this->emailNotification = $emailNotification;
-        $this->appEmulation = $appEmulation;
     }
 
     /**
@@ -117,16 +105,9 @@ class Observer
         foreach ($collection as $sitemap) {
             /* @var $sitemap \Magento\Sitemap\Model\Sitemap */
             try {
-                $this->appEmulation->startEnvironmentEmulation(
-                    $sitemap->getStoreId(),
-                    Area::AREA_FRONTEND,
-                    true
-                );
                 $sitemap->generateXml();
             } catch (\Exception $e) {
                 $errors[] = $e->getMessage();
-            } finally {
-                $this->appEmulation->stopEnvironmentEmulation();
             }
         }
         if ($errors && $recipient) {
