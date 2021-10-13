@@ -3,83 +3,14 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
-declare(strict_types=1);
-
 namespace Magento\Sitemap\Controller\Adminhtml\Sitemap;
 
-use Magento\Backend\App\Action\Context;
-use Magento\Backend\Model\View\Result\Redirect;
-use Magento\Framework\App\Action\HttpPostActionInterface;
+use Magento\Backend\App\Action;
 use Magento\Framework\App\Filesystem\DirectoryList;
 use Magento\Framework\Controller;
-use Magento\Framework\Controller\ResultInterface;
-use Magento\Framework\Filesystem;
-use Magento\Framework\Validator\StringLength;
-use Magento\MediaStorage\Model\File\Validator\AvailablePath;
-use Magento\Sitemap\Controller\Adminhtml\Sitemap;
-use Magento\Sitemap\Helper\Data;
-use Magento\Sitemap\Model\SitemapFactory;
 
-/**
- * Save sitemap controller.
- */
-class Save extends Sitemap implements HttpPostActionInterface
+class Save extends \Magento\Sitemap\Controller\Adminhtml\Sitemap
 {
-    /**
-     * Maximum length of sitemap filename
-     */
-    const MAX_FILENAME_LENGTH = 32;
-
-    /**
-     * @var StringLength
-     */
-    private $stringValidator;
-
-    /**
-     * @var AvailablePath
-     */
-    private $pathValidator;
-
-    /**
-     * @var Data
-     */
-    private $sitemapHelper;
-
-    /**
-     * @var Filesystem
-     */
-    private $filesystem;
-
-    /**
-     * @var SitemapFactory
-     */
-    private $sitemapFactory;
-
-    /**
-     * Save constructor.
-     * @param Context $context
-     * @param StringLength $stringValidator
-     * @param AvailablePath $pathValidator
-     * @param Data $sitemapHelper
-     * @param Filesystem $filesystem
-     * @param SitemapFactory $sitemapFactory
-     */
-    public function __construct(
-        Context $context,
-        StringLength $stringValidator,
-        AvailablePath $pathValidator,
-        Data $sitemapHelper,
-        Filesystem $filesystem,
-        SitemapFactory $sitemapFactory
-    ) {
-        parent::__construct($context);
-        $this->stringValidator = $stringValidator;
-        $this->pathValidator = $pathValidator;
-        $this->sitemapHelper = $sitemapHelper;
-        $this->filesystem = $filesystem;
-        $this->sitemapFactory = $sitemapFactory;
-    }
-
     /**
      * Validate path for generation
      *
@@ -92,25 +23,17 @@ class Save extends Sitemap implements HttpPostActionInterface
         if (!empty($data['sitemap_filename']) && !empty($data['sitemap_path'])) {
             $data['sitemap_path'] = '/' . ltrim($data['sitemap_path'], '/');
             $path = rtrim($data['sitemap_path'], '\\/') . '/' . $data['sitemap_filename'];
-            $this->pathValidator->setPaths($this->sitemapHelper->getValidPaths());
-            if (!$this->pathValidator->isValid($path)) {
-                foreach ($this->pathValidator->getMessages() as $message) {
+            /** @var $validator \Magento\MediaStorage\Model\File\Validator\AvailablePath */
+            $validator = $this->_objectManager->create(\Magento\MediaStorage\Model\File\Validator\AvailablePath::class);
+            /** @var $helper \Magento\Sitemap\Helper\Data */
+            $helper = $this->_objectManager->get(\Magento\Sitemap\Helper\Data::class);
+            $validator->setPaths($helper->getValidPaths());
+            if (!$validator->isValid($path)) {
+                foreach ($validator->getMessages() as $message) {
                     $this->messageManager->addErrorMessage($message);
                 }
                 // save data in session
-                $this->_session->setFormData($data);
-                // redirect to edit form
-                return false;
-            }
-
-            $filename = rtrim($data['sitemap_filename']);
-            $this->stringValidator->setMax(self::MAX_FILENAME_LENGTH);
-            if (!$this->stringValidator->isValid($filename)) {
-                foreach ($this->stringValidator->getMessages() as $message) {
-                    $this->messageManager->addErrorMessage($message);
-                }
-                // save data in session
-                $this->_session->setFormData($data);
+                $this->_objectManager->get(\Magento\Backend\Model\Session::class)->setFormData($data);
                 // redirect to edit form
                 return false;
             }
@@ -122,13 +45,13 @@ class Save extends Sitemap implements HttpPostActionInterface
      * Clear sitemap
      *
      * @param \Magento\Sitemap\Model\Sitemap $model
-     *
      * @return void
      */
     protected function clearSiteMap(\Magento\Sitemap\Model\Sitemap $model)
     {
-        /** @var Filesystem $directory */
-        $directory = $this->filesystem->getDirectoryWrite(DirectoryList::ROOT);
+        /** @var \Magento\Framework\Filesystem\Directory\Write $directory */
+        $directory = $this->_objectManager->get(\Magento\Framework\Filesystem::class)
+            ->getDirectoryWrite(DirectoryList::ROOT);
 
         if ($this->getRequest()->getParam('sitemap_id')) {
             $model->load($this->getRequest()->getParam('sitemap_id'));
@@ -151,7 +74,7 @@ class Save extends Sitemap implements HttpPostActionInterface
     {
         // init model and set data
         /** @var \Magento\Sitemap\Model\Sitemap $model */
-        $model = $this->sitemapFactory->create();
+        $model = $this->_objectManager->create(\Magento\Sitemap\Model\Sitemap::class);
         $this->clearSiteMap($model);
         $model->setData($data);
 
@@ -162,13 +85,13 @@ class Save extends Sitemap implements HttpPostActionInterface
             // display success message
             $this->messageManager->addSuccessMessage(__('You saved the sitemap.'));
             // clear previously saved data from session
-            $this->_session->setFormData(false);
+            $this->_objectManager->get(\Magento\Backend\Model\Session::class)->setFormData(false);
             return $model->getId();
         } catch (\Exception $e) {
             // display error message
             $this->messageManager->addErrorMessage($e->getMessage());
             // save data in session
-            $this->_session->setFormData($data);
+            $this->_objectManager->get(\Magento\Backend\Model\Session::class)->setFormData($data);
         }
         return false;
     }
@@ -177,13 +100,12 @@ class Save extends Sitemap implements HttpPostActionInterface
      * Get result after saving data
      *
      * @param string|bool $id
-     * @return ResultInterface
+     * @return \Magento\Framework\Controller\ResultInterface
      */
     protected function getResult($id)
     {
-        /** @var Redirect $resultRedirect */
+        /** @var \Magento\Backend\Model\View\Result\Redirect $resultRedirect */
         $resultRedirect = $this->resultFactory->create(Controller\ResultFactory::TYPE_REDIRECT);
-
         if ($id) {
             // check if 'Save and Continue'
             if ($this->getRequest()->getParam('back')) {
@@ -203,20 +125,19 @@ class Save extends Sitemap implements HttpPostActionInterface
             'adminhtml/*/edit',
             ['sitemap_id' => $this->getRequest()->getParam('sitemap_id')]
         );
-
         return $resultRedirect;
     }
 
     /**
      * Save action
      *
-     * @return Redirect
+     * @return \Magento\Backend\Model\View\Result\Redirect
      */
     public function execute()
     {
         // check if data sent
         $data = $this->getRequest()->getPostValue();
-        /** @var Redirect $resultRedirect */
+        /** @var \Magento\Backend\Model\View\Result\Redirect $resultRedirect */
         $resultRedirect = $this->resultFactory->create(Controller\ResultFactory::TYPE_REDIRECT);
         if ($data) {
             if (!$this->validatePath($data)) {

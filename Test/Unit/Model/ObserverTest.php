@@ -3,104 +3,99 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
-declare(strict_types=1);
-
 namespace Magento\Sitemap\Test\Unit\Model;
 
-use Magento\Framework\App\Config\ScopeConfigInterface;
-use Magento\Framework\ObjectManagerInterface;
 use Magento\Framework\TestFramework\Unit\Helper\ObjectManager;
-use Magento\Sitemap\Model\EmailNotification;
-use Magento\Sitemap\Model\Observer;
-use Magento\Sitemap\Model\ResourceModel\Sitemap\Collection;
-use Magento\Sitemap\Model\ResourceModel\Sitemap\CollectionFactory;
-use Magento\Sitemap\Model\Sitemap;
-use Magento\Store\Model\App\Emulation;
-use Magento\Store\Model\ScopeInterface;
-use PHPUnit\Framework\MockObject\MockObject;
-use PHPUnit\Framework\TestCase;
 
 /**
+ * Class ObserverTest
  * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  */
-class ObserverTest extends TestCase
+class ObserverTest extends \PHPUnit\Framework\TestCase
 {
     /**
-     * @var ObjectManager
+     * @var \Magento\Framework\TestFramework\Unit\Helper\ObjectManager
      */
     private $objectManager;
 
     /**
-     * @var Observer
+     * @var \Magento\Sitemap\Model\Observer
      */
     private $observer;
 
     /**
-     * @var ScopeConfigInterface|MockObject
+     * @var \Magento\Framework\App\Config\ScopeConfigInterface|\PHPUnit_Framework_MockObject_MockObject
      */
     private $scopeConfigMock;
 
     /**
-     * @var CollectionFactory|MockObject
+     * @var \Magento\Sitemap\Model\ResourceModel\Sitemap\CollectionFactory|\PHPUnit_Framework_MockObject_MockObject
      */
     private $collectionFactoryMock;
 
     /**
-     * @var Collection|MockObject
+     * @var \Magento\Framework\Mail\Template\TransportBuilder|\PHPUnit_Framework_MockObject_MockObject
+     */
+    private $transportBuilderMock;
+
+    /**
+     * @var \Magento\Store\Model\StoreManagerInterface|\PHPUnit_Framework_MockObject_MockObject
+     */
+    private $storeManagerMock;
+
+    /**
+     * @var \Magento\Framework\Translate\Inline\StateInterface|\PHPUnit_Framework_MockObject_MockObject
+     */
+    private $inlineTranslationMock;
+
+    /**
+     * @var \Magento\Sitemap\Model\ResourceModel\Sitemap\Collection|\PHPUnit_Framework_MockObject_MockObject
      */
     private $sitemapCollectionMock;
 
     /**
-     * @var Sitemap|MockObject
+     * @var \Magento\Sitemap\Model\Sitemap|\PHPUnit_Framework_MockObject_MockObject
      */
     private $sitemapMock;
 
     /**
-     * @var ObjectManagerInterface|MockObject
+     * @var \Magento\Framework\ObjectManagerInterface|\PHPUnit_Framework_MockObject_MockObject
      */
     private $objectManagerMock;
 
-    /**
-     * @var Emulation|MockObject
-     */
-    private $appEmulationMock;
-
-    /**
-     * @var EmailNotification|MockObject
-     */
-    private $emailNotificationMock;
-
-    protected function setUp(): void
+    protected function setUp()
     {
-        $this->objectManagerMock = $this->getMockBuilder(ObjectManagerInterface::class)
+        $this->objectManagerMock = $this->getMockBuilder(\Magento\Framework\ObjectManagerInterface::class)
             ->getMock();
-        $this->scopeConfigMock = $this->getMockBuilder(ScopeConfigInterface::class)
+        $this->scopeConfigMock = $this->getMockBuilder(\Magento\Framework\App\Config\ScopeConfigInterface::class)
             ->getMock();
         $this->collectionFactoryMock = $this->getMockBuilder(
-            CollectionFactory::class
+            \Magento\Sitemap\Model\ResourceModel\Sitemap\CollectionFactory::class
         )->disableOriginalConstructor()
             ->setMethods(['create'])
             ->getMock();
-        $this->sitemapCollectionMock = $this->createPartialMock(
-            Collection::class,
-            ['getIterator']
-        );
-        $this->sitemapMock = $this->getMockBuilder(Sitemap::class)
-            ->addMethods(['getStoreId'])
-            ->onlyMethods(['generateXml'])
+        $this->transportBuilderMock = $this->getMockBuilder(\Magento\Framework\Mail\Template\TransportBuilder::class)
             ->disableOriginalConstructor()
             ->getMock();
-        $this->appEmulationMock = $this->createMock(Emulation::class);
-        $this->emailNotificationMock = $this->createMock(EmailNotification::class);
-        $this->objectManager = new ObjectManager($this);
+        $this->storeManagerMock = $this->getMockBuilder(\Magento\Store\Model\StoreManagerInterface::class)
+            ->getMock();
+        $this->inlineTranslationMock = $this->getMockBuilder(\Magento\Framework\Translate\Inline\StateInterface::class)
+            ->getMock();
+        $this->sitemapCollectionMock = $this->createPartialMock(
+            \Magento\Sitemap\Model\ResourceModel\Sitemap\Collection::class,
+            ['getIterator']
+        );
+        $this->sitemapMock = $this->createPartialMock(\Magento\Sitemap\Model\Sitemap::class, ['generateXml']);
 
+        $this->objectManager = new ObjectManager($this);
         $this->observer = $this->objectManager->getObject(
-            Observer::class,
+            \Magento\Sitemap\Model\Observer::class,
             [
                 'scopeConfig' => $this->scopeConfigMock,
                 'collectionFactory' => $this->collectionFactoryMock,
-                'appEmulation' => $this->appEmulationMock,
-                'emailNotification' => $this->emailNotificationMock
+                'storeManager' => $this->storeManagerMock,
+                'transportBuilder' => $this->transportBuilderMock,
+                'inlineTranslation' => $this->inlineTranslationMock
             ]
         );
     }
@@ -108,7 +103,7 @@ class ObserverTest extends TestCase
     public function testScheduledGenerateSitemapsSendsExceptionEmail()
     {
         $exception = 'Sitemap Exception';
-        $storeId = 1;
+        $transport = $this->createMock(\Magento\Framework\Mail\TransportInterface::class);
 
         $this->scopeConfigMock->expects($this->once())->method('isSetFlag')->willReturn(true);
 
@@ -120,25 +115,55 @@ class ObserverTest extends TestCase
             ->method('getIterator')
             ->willReturn(new \ArrayIterator([$this->sitemapMock]));
 
-        $this->sitemapMock->expects($this->at(0))
-            ->method('getStoreId')
-            ->willReturn($storeId);
-
         $this->sitemapMock->expects($this->once())
             ->method('generateXml')
             ->willThrowException(new \Exception($exception));
 
-        $this->scopeConfigMock->expects($this->at(0))
+        $this->scopeConfigMock->expects($this->at(1))
             ->method('getValue')
             ->with(
-                Observer::XML_PATH_ERROR_RECIPIENT,
-                ScopeInterface::SCOPE_STORE
+                \Magento\Sitemap\Model\Observer::XML_PATH_ERROR_RECIPIENT,
+                \Magento\Store\Model\ScopeInterface::SCOPE_STORE
             )
             ->willReturn('error-recipient@example.com');
 
-        $this->emailNotificationMock->expects($this->once())
-            ->method('sendErrors')
-            ->with([$exception]);
+        $this->inlineTranslationMock->expects($this->once())
+            ->method('suspend');
+
+        $this->transportBuilderMock->expects($this->once())
+            ->method('setTemplateIdentifier')
+            ->will($this->returnSelf());
+
+        $this->transportBuilderMock->expects($this->once())
+            ->method('setTemplateOptions')
+            ->with([
+                'area' => \Magento\Backend\App\Area\FrontNameResolver::AREA_CODE,
+                'store' => \Magento\Store\Model\Store::DEFAULT_STORE_ID,
+            ])
+            ->will($this->returnSelf());
+
+        $this->transportBuilderMock->expects($this->once())
+            ->method('setTemplateVars')
+            ->with(['warnings' => $exception])
+            ->will($this->returnSelf());
+
+        $this->transportBuilderMock->expects($this->once())
+            ->method('setFrom')
+            ->will($this->returnSelf());
+
+        $this->transportBuilderMock->expects($this->once())
+            ->method('addTo')
+            ->will($this->returnSelf());
+
+        $this->transportBuilderMock->expects($this->once())
+            ->method('getTransport')
+            ->willReturn($transport);
+
+        $transport->expects($this->once())
+            ->method('sendMessage');
+
+        $this->inlineTranslationMock->expects($this->once())
+            ->method('resume');
 
         $this->observer->scheduledGenerateSitemaps();
     }

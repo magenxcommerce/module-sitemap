@@ -5,11 +5,6 @@
  */
 namespace Magento\Sitemap\Model;
 
-use Magento\Sitemap\Model\EmailNotification as SitemapEmail;
-use Magento\Framework\App\Config\ScopeConfigInterface;
-use Magento\Sitemap\Model\ResourceModel\Sitemap\CollectionFactory;
-use Magento\Store\Model\ScopeInterface;
-
 /**
  * Sitemap module observer
  *
@@ -49,32 +44,47 @@ class Observer
      *
      * @var \Magento\Framework\App\Config\ScopeConfigInterface
      */
-    private $scopeConfig;
+    protected $_scopeConfig;
 
     /**
      * @var \Magento\Sitemap\Model\ResourceModel\Sitemap\CollectionFactory
      */
-    private $collectionFactory;
+    protected $_collectionFactory;
 
     /**
-     * @var $emailNotification
+     * @var \Magento\Framework\Mail\Template\TransportBuilder
      */
-    private $emailNotification;
+    protected $_transportBuilder;
 
     /**
-     * Observer constructor.
-     * @param ScopeConfigInterface $scopeConfig
-     * @param CollectionFactory $collectionFactory
-     * @param EmailNotification $emailNotification
+     * @var \Magento\Store\Model\StoreManagerInterface
+     */
+    protected $_storeManager;
+
+    /**
+     * @var \Magento\Framework\Translate\Inline\StateInterface
+     */
+    protected $inlineTranslation;
+
+    /**
+     * @param \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig
+     * @param \Magento\Sitemap\Model\ResourceModel\Sitemap\CollectionFactory $collectionFactory
+     * @param \Magento\Store\Model\StoreManagerInterface $storeManager
+     * @param \Magento\Framework\Mail\Template\TransportBuilder $transportBuilder
+     * @param \Magento\Framework\Translate\Inline\StateInterface $inlineTranslation
      */
     public function __construct(
-        ScopeConfigInterface $scopeConfig,
-        CollectionFactory $collectionFactory,
-        SitemapEmail $emailNotification
+        \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig,
+        \Magento\Sitemap\Model\ResourceModel\Sitemap\CollectionFactory $collectionFactory,
+        \Magento\Store\Model\StoreManagerInterface $storeManager,
+        \Magento\Framework\Mail\Template\TransportBuilder $transportBuilder,
+        \Magento\Framework\Translate\Inline\StateInterface $inlineTranslation
     ) {
-        $this->scopeConfig = $scopeConfig;
-        $this->collectionFactory = $collectionFactory;
-        $this->emailNotification = $emailNotification;
+        $this->_scopeConfig = $scopeConfig;
+        $this->_collectionFactory = $collectionFactory;
+        $this->_storeManager = $storeManager;
+        $this->_transportBuilder = $transportBuilder;
+        $this->inlineTranslation = $inlineTranslation;
     }
 
     /**
@@ -87,20 +97,17 @@ class Observer
     public function scheduledGenerateSitemaps()
     {
         $errors = [];
-        $recipient = $this->scopeConfig->getValue(
-            Observer::XML_PATH_ERROR_RECIPIENT,
-            ScopeInterface::SCOPE_STORE
-        );
+
         // check if scheduled generation enabled
-        if (!$this->scopeConfig->isSetFlag(
+        if (!$this->_scopeConfig->isSetFlag(
             self::XML_PATH_GENERATION_ENABLED,
-            ScopeInterface::SCOPE_STORE
+            \Magento\Store\Model\ScopeInterface::SCOPE_STORE
         )
         ) {
             return;
         }
 
-        $collection = $this->collectionFactory->create();
+        $collection = $this->_collectionFactory->create();
         /* @var $collection \Magento\Sitemap\Model\ResourceModel\Sitemap\Collection */
         foreach ($collection as $sitemap) {
             /* @var $sitemap \Magento\Sitemap\Model\Sitemap */
@@ -110,8 +117,41 @@ class Observer
                 $errors[] = $e->getMessage();
             }
         }
-        if ($errors && $recipient) {
-            $this->emailNotification->sendErrors($errors);
+
+        if ($errors && $this->_scopeConfig->getValue(
+            self::XML_PATH_ERROR_RECIPIENT,
+            \Magento\Store\Model\ScopeInterface::SCOPE_STORE
+        )
+        ) {
+            $this->inlineTranslation->suspend();
+
+            $this->_transportBuilder->setTemplateIdentifier(
+                $this->_scopeConfig->getValue(
+                    self::XML_PATH_ERROR_TEMPLATE,
+                    \Magento\Store\Model\ScopeInterface::SCOPE_STORE
+                )
+            )->setTemplateOptions(
+                [
+                    'area' => \Magento\Backend\App\Area\FrontNameResolver::AREA_CODE,
+                    'store' => \Magento\Store\Model\Store::DEFAULT_STORE_ID,
+                ]
+            )->setTemplateVars(
+                ['warnings' => join("\n", $errors)]
+            )->setFrom(
+                $this->_scopeConfig->getValue(
+                    self::XML_PATH_ERROR_IDENTITY,
+                    \Magento\Store\Model\ScopeInterface::SCOPE_STORE
+                )
+            )->addTo(
+                $this->_scopeConfig->getValue(
+                    self::XML_PATH_ERROR_RECIPIENT,
+                    \Magento\Store\Model\ScopeInterface::SCOPE_STORE
+                )
+            );
+            $transport = $this->_transportBuilder->getTransport();
+            $transport->sendMessage();
+
+            $this->inlineTranslation->resume();
         }
     }
 }
