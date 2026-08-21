@@ -69,7 +69,7 @@ publish URLs the storefront cannot serve.
 ## Install
 
 ```bash
-composer require magenx/module-sitemap
+composer require magenxcommerce/module-sitemap
 bin/magento module:enable Magenx_Sitemap
 bin/magento setup:upgrade
 bin/magento cache:flush
