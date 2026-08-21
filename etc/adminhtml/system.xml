@@ -1,0 +1,69 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Copyright (c) 2026 Magenx Commerce. All rights reserved.
+ * See LICENSE for license details.
+ */
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Config:etc/system_file.xsd">
+    <system>
+        <tab id="magenx" translate="label" sortOrder="400">
+            <label>Magenx</label>
+        </tab>
+        <section id="magenx_sitemap" translate="label" type="text" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="1">
+            <class>separator-top</class>
+            <label>Sitemap URLs</label>
+            <tab>magenx</tab>
+            <resource>Magenx_Sitemap::config</resource>
+            <group id="general" translate="label" type="text" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
+                <label>General</label>
+                <field id="enabled" translate="label comment" type="select" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                    <label>Rewrite Sitemap URLs</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>Rewrites every URL in the generated XML sitemap into the headless storefront's route shape. Off means Magento's own paths are written unchanged.</comment>
+                </field>
+                <field id="store_path_prefix" translate="label comment" type="text" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                    <label>Store Path Prefix</label>
+                    <comment>Leading path segment for this store view, normally the storefront locale (for example "en" for https://example.com/en/product/blue-jacket). Set it per store view; leave empty for a store served at the site root.</comment>
+                    <depends><field id="enabled">1</field></depends>
+                </field>
+                <field id="strip_url_suffix" translate="label comment" type="select" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                    <label>Strip URL Suffix</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>Removes the catalog URL suffix (Catalog &gt; SEO, usually ".html") from product and category URLs, which the storefront routes do not use.</comment>
+                    <depends><field id="enabled">1</field></depends>
+                </field>
+            </group>
+            <group id="category" translate="label" type="text" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
+                <label>Categories</label>
+                <field id="path_prefix" translate="label comment" type="text" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                    <label>Category Path Prefix</label>
+                    <comment>Inserted between the store path prefix and the category URL path, producing /{store prefix}/{prefix}/men/tops. Leave empty to keep the bare category path.</comment>
+                    <depends><field id="enabled">1</field></depends>
+                </field>
+            </group>
+            <group id="product" translate="label" type="text" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="1">
+                <label>Products</label>
+                <field id="path_prefix" translate="label comment" type="text" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                    <label>Product Path Prefix</label>
+                    <comment>Inserted between the store path prefix and the product URL, producing /{store prefix}/{prefix}/blue-jacket. Leave empty to keep the bare product path.</comment>
+                    <depends><field id="enabled">1</field></depends>
+                </field>
+                <field id="url_key_only" translate="label comment" type="select" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                    <label>Use Product URL Key Only</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>Drops any category path from the product URL (men/tops/blue-jacket becomes blue-jacket). Required when "Use Categories Path for Product URLs" is enabled, because the storefront product route is a single segment.</comment>
+                    <depends><field id="enabled">1</field></depends>
+                </field>
+            </group>
+            <group id="cms" translate="label" type="text" sortOrder="40" showInDefault="1" showInWebsite="1" showInStore="1">
+                <label>CMS Pages</label>
+                <field id="path_prefix" translate="label comment" type="text" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                    <label>CMS Page Path Prefix</label>
+                    <comment>Inserted between the store path prefix and the CMS page identifier. Leave empty for storefronts that serve CMS pages at /{store prefix}/{identifier}. The configured home page always collapses to the store root.</comment>
+                    <depends><field id="enabled">1</field></depends>
+                </field>
+            </group>
+        </section>
+    </system>
+</config>
