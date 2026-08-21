@@ -1,0 +1,28 @@
+{
+    "name": "magenxcommerce/module-sitemap",
+    "description": "Rewrites Magento XML sitemap URLs into the headless storefront's route shape (store/locale prefix, category and product path prefixes, url suffix stripping).",
+    "config": {
+        "sort-packages": true
+    },
+    "require": {
+        "php": "~8.3.0||~8.4.0||~8.5.0",
+        "magento/framework": "*",
+        "magento/module-catalog": "*",
+        "magento/module-cms": "*",
+        "magento/module-config": "*",
+        "magento/module-sitemap": "*",
+        "magento/module-store": "*"
+    },
+    "type": "magento2-module",
+    "license": [
+        "MIT"
+    ],
+    "autoload": {
+        "files": [
+            "registration.php"
+        ],
+        "psr-4": {
+            "Magenx\\Sitemap\\": ""
+        }
+    }
+}

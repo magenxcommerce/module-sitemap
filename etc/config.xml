@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Copyright (c) 2026 Magenx Commerce. All rights reserved.
+ * See LICENSE for license details.
+ */
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Store:etc/config.xsd">
+    <default>
+        <magenx_sitemap>
+            <general>
+                <!-- Off until the store path prefix is set per store view: rewriting with
+                     an unconfigured prefix would publish URLs the storefront cannot serve. -->
+                <enabled>0</enabled>
+                <store_path_prefix/>
+                <strip_url_suffix>1</strip_url_suffix>
+            </general>
+            <category>
+                <path_prefix>category</path_prefix>
+            </category>
+            <product>
+                <path_prefix>product</path_prefix>
+                <url_key_only>1</url_key_only>
+            </product>
+            <cms>
+                <path_prefix/>
+            </cms>
+        </magenx_sitemap>
+    </default>
+</config>
