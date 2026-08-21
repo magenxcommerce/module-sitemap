@@ -10,8 +10,10 @@
         <resources>
             <resource id="Magento_Backend::admin">
                 <resource id="Magento_Backend::stores">
-                    <resource id="Magento_Config::config">
-                        <resource id="Magenx_Sitemap::config" title="Magenx Sitemap URLs" sortOrder="100"/>
+                    <resource id="Magento_Backend::stores_settings">
+                        <resource id="Magento_Config::config">
+                            <resource id="Magenx_Sitemap::config" title="Sitemap URLs Configuration" sortOrder="100"/>
+                        </resource>
                     </resource>
                 </resource>
             </resource>
